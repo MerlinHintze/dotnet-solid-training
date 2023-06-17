@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using DevBasics.CarManagement.Dependencies;
+using DevBasics.CarManagement.Refactor;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -12,6 +13,7 @@ namespace DevBasics.CarManagement
     public class CarManagementService : BaseService
     {
         private readonly IMapper _mapper;
+        private readonly CarMissingDataChecker carMissingDataChecker;
 
         public CarManagementService(
             IMapper mapper,
@@ -22,7 +24,8 @@ namespace DevBasics.CarManagement
             IBulkRegistrationService bulkRegisterService,
             IRegistrationDetailService registrationDetailService,
             ILeasingRegistrationRepository registrationRepository,
-            ICarRegistrationRepository carRegistrationRepository)
+            ICarRegistrationRepository carRegistrationRepository, 
+            CarMissingDataChecker carMissingDataChecker)
                 : base(settings, httpHeader, apiClient,
                       transactionStateService: transactionStateService,
                       bulkRegistrationService: bulkRegisterService,
@@ -33,6 +36,7 @@ namespace DevBasics.CarManagement
             Console.WriteLine($"Initializing service {nameof(CarManagementService)}");
 
             _mapper = mapper;
+            this.carMissingDataChecker = carMissingDataChecker;
         }
 
         // Unübersichtlicht
@@ -121,7 +125,7 @@ namespace DevBasics.CarManagement
                     }
 
 
-                    bool hasMissingData = HasMissingData(car);
+                    bool hasMissingData = carMissingDataChecker.HasMissingData(car);
                     if (hasMissingData)
                     {
                         Console.WriteLine($"Car {car.VehicleIdentificationNumber} has missing data. " +
@@ -166,7 +170,7 @@ namespace DevBasics.CarManagement
                         $"Registering {registrationResult.RegisteredCars.Count} cars for registration with id {registrationResult.RegistrationId}. " +
                         $"(RegistrationId = {registrationId})");
 
-                    bool hasMissingData = HasMissingData(registerCarsModel.Cars.FirstOrDefault());
+                    bool hasMissingData = carMissingDataChecker.HasMissingData(registerCarsModel.Cars.FirstOrDefault());
 
                     string transactionId = await BeginTransactionGenerateId(
                                             registerCarsModel.Cars.Select(x => x.VehicleIdentificationNumber).ToList(),
@@ -255,7 +259,7 @@ namespace DevBasics.CarManagement
                                 RegistrationId = dbApiCar.RegistrationId
                             };
 
-                            bool hasMissingData = HasMissingData(dbApiCar);
+                            bool hasMissingData = carMissingDataChecker.HasMissingData(dbApiCar);
                             if (registerCarsModel.DeactivateAutoRegistrationProcessing && !hasMissingData)
                             {
                                 Console.WriteLine(
@@ -294,16 +298,6 @@ namespace DevBasics.CarManagement
                 Console.WriteLine($"Error saving registration for {CarBrand.Toyota.ToString()} application: {ex}");
                 throw ex;
             }
-        }
-
-        // zu viele Expression, die Verkettung ist zu lang
-        public bool HasMissingData(CarRegistrationModel car)
-        {
-            return (string.IsNullOrWhiteSpace(car.CompanyId))
-                        || (string.IsNullOrWhiteSpace(car.VehicleIdentificationNumber))
-                            || (string.IsNullOrWhiteSpace(car.CustomerId))
-                                || car.DeliveryDate == null
-                                    || (string.IsNullOrWhiteSpace(car.ErpDeliveryNumber));
         }
 
         private async Task<BulkRegistrationRequest> MapToModel(RegistrationType registrationType, RegisterCarsModel cars, string transactionId)
