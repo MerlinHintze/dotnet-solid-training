@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using DevBasics.CarManagement.CarManagementServiceRefactor;
 using DevBasics.CarManagement.Dependencies;
 using System;
 using System.Collections.Generic;
@@ -31,7 +32,7 @@ namespace DevBasics.CarManagement
                 new RegistrationDetailServiceMock(),
                 leasingRegistrationRepository,
                 carRegistrationRepositoryMock,
-                new Refactor.CarMissingDataChecker());
+                new CarMissingDataChecker());
 
             var result = await service.RegisterCarsAsync(
                 new RegisterCarsModel

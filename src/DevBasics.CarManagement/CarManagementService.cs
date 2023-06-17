@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
+using DevBasics.CarManagement.CarManagementServiceRefactor;
+using DevBasics.CarManagement.CarPoolNumberHelperRefactor;
 using DevBasics.CarManagement.Dependencies;
-using DevBasics.CarManagement.Refactor;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -84,10 +85,12 @@ namespace DevBasics.CarManagement
                     }
                 }
 
+                // Ziel ist es registrationId und carPoolNumber zu erhalten anhand eines CarBrand
+                // ICarBrandHelper
                 // Open-Closed Prinzip mit CarPoolNumberHelper.Generate wird verletzt
                 // Zu spezifisch wegen Toyota müsste abstrakter sein
-                CarPoolNumberHelper.Generate(
-                    CarBrand.Toyota,
+                CarRegistrationNumberGenerator.Generate(
+                    new ToyotaRegistrationNumber(),
                     registerCarsModel.Cars.FirstOrDefault().CarPool,
                     out string registrationId,
                     out string carPoolNumber);
