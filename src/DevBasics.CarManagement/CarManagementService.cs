@@ -35,13 +35,17 @@ namespace DevBasics.CarManagement
             _mapper = mapper;
         }
 
+        // Unübersichtlicht
+        // aufsplitten auf mehrere Methoden
         public async Task<ServiceResult> RegisterCarsAsync(RegisterCarsModel registerCarsModel, bool isForcedRegistration, Claims claims, string identity = "Unknown")
         {
+            // Factory
             ServiceResult serviceResult = new ServiceResult();
 
             try
             {
                 // See Feature 307.
+                // Methode 
                 registerCarsModel.Cars.ToList().ForEach(x =>
                 {
                     if (string.IsNullOrWhiteSpace(x.VehicleIdentificationNumber) == false)
@@ -50,12 +54,15 @@ namespace DevBasics.CarManagement
                     }
                 });
 
+                // Method
                 registerCarsModel.Cars = registerCarsModel.Cars.RemoveDuplicates();
 
+                // Nutzung eines Loggers
                 Console.WriteLine($"Trying to invoke initial bulk registration for {registerCarsModel.Cars.Count} cars. " +
                     $"Cars: {string.Join(", ", registerCarsModel.Cars.Select(x => x.VehicleIdentificationNumber))}, " +
                     $"Is forced registration: {isForcedRegistration}");
 
+                // Methode
                 if (isForcedRegistration && !registerCarsModel.DeactivateAutoRegistrationProcessing)
                 {
                     List<CarRegistrationModel> existingItems = registerCarsModel.Cars.Where(x => x.IsExistingVehicleInAzureDB).ToList();
@@ -73,23 +80,29 @@ namespace DevBasics.CarManagement
                     }
                 }
 
+                // Open-Closed Prinzip mit CarPoolNumberHelper.Generate wird verletzt
+                // Zu spezifisch wegen Toyota müsste abstrakter sein
                 CarPoolNumberHelper.Generate(
                     CarBrand.Toyota,
                     registerCarsModel.Cars.FirstOrDefault().CarPool,
                     out string registrationId,
                     out string carPoolNumber);
 
+                // Ein Logger nutzen
                 Console.WriteLine($"Created unique car pool number {carPoolNumber} and registration id {registrationId}");
 
+                // Foreach kann in eine seperate Methode
                 DateTime today = DateTime.Now.Date;
                 foreach (CarRegistrationModel car in registerCarsModel.Cars)
                 {
                     car.CarPoolNumber = carPoolNumber;
                     car.RegistrationId = registrationId;
 
+                    // Kommentar ist nicht aussagekräftig
                     // See Bug 281.
                     if (string.IsNullOrWhiteSpace(car.ErpRegistrationNumber))
                     {
+                        // Kommentar ist nicht aussagekräftig
                         // See Feature 182.
                         if (car.DeliveryDate == null)
                         {
@@ -97,6 +110,7 @@ namespace DevBasics.CarManagement
                             car.DeliveryDate = delivery;
                         }
 
+                        // Kommentar ist nicht aussagekräftig
                         // See Feature 182.
                         if (string.IsNullOrWhiteSpace(car.ErpDeliveryNumber))
                         {
@@ -105,6 +119,7 @@ namespace DevBasics.CarManagement
                             Console.WriteLine($"Car {car.VehicleIdentificationNumber} has no value for Delivery Number: Setting default value to registration id {registrationId}");
                         }
                     }
+
 
                     bool hasMissingData = HasMissingData(car);
                     if (hasMissingData)
@@ -116,13 +131,17 @@ namespace DevBasics.CarManagement
                     }
                 }
 
+                // Die drei zeilen können separiert werden
                 registerCarsModel.VendorId = registerCarsModel.Cars.Select(x => x.CompanyId).FirstOrDefault();
                 registerCarsModel.CompanyId = registerCarsModel.VendorId;
                 registerCarsModel.CustomerId = registerCarsModel.Cars.FirstOrDefault().CustomerId;
 
+                // Factory für "new" nutzen
                 RegisterCarsResult registrationResult = await new RegistrationService().SaveRegistrations(
                     registerCarsModel, claims, registrationId, identity, isForcedRegistration, CarBrand.Toyota);
 
+                // Expression ist zu lang, lieber in einer Variablen zwischenspeichern
+                // Die Logik ist nicht ganz verständlich, durch bessere Benennungen wäre es besser
                 if (registerCarsModel.Cars.Any(x => x.TransactionState == TransactionResult.MissingData.ToString("D") == true)
                         && registerCarsModel.Cars.All(x => x.TransactionState == TransactionResult.MissingData.ToString("D")) == false)
                 {
@@ -132,12 +151,15 @@ namespace DevBasics.CarManagement
                         .ToList();
                 }
 
+                // Wäre dieser Code nicht oben besser, da zu anfang gleich abfragt ob bereits registriert ist, dann ist der Rest nicht mehr notwendig
                 if (registrationResult.AlreadyRegistered)
                 {
                     serviceResult.Message = TransactionHelper.ALREADY_ENROLLED;
                     return serviceResult;
                 }
 
+                // SRP Verstoß, zu viele verschachtelte if/else
+                // Es ist unübersichtlich und nicht gut lesbar durch viel Logik
                 if (registrationResult.RegisteredCars != null && registrationResult.RegisteredCars.Count > 0)
                 {
                     Console.WriteLine(
@@ -152,7 +174,7 @@ namespace DevBasics.CarManagement
                                             registerCarsModel.CompanyId,
                                             RegistrationType.Register,
                                             identity);
-
+                    // Könnte ausgelagert werden mit gutem Naming um zu verstehen was genau passiert
                     if (!hasMissingData)
                     {
                         BulkRegistrationRequest requestPayload = null;
@@ -274,6 +296,7 @@ namespace DevBasics.CarManagement
             }
         }
 
+        // zu viele Expression, die Verkettung ist zu lang
         public bool HasMissingData(CarRegistrationModel car)
         {
             return (string.IsNullOrWhiteSpace(car.CompanyId))

@@ -10,6 +10,9 @@ namespace DevBasics.CarManagement
             registrationRegistrationId = GenerateRegistrationRegistrationId();
             registrationNumber = string.Empty;
 
+            // Kein Switch Case nutzen, es auslagern anhand eines Interfaces
+            // GenerateFordRegistrationNumber und GenerateToyotaRegistrationNumber würden wegfallen, stattdessen werden Klassen für jedne Typ erstellt
+            // Jeder erstellte Klasse erhält ein Interface mit GenerateRegistrationNumber
             switch (requestOrigin)
             {
                 case CarBrand.Ford:
@@ -33,11 +36,13 @@ namespace DevBasics.CarManagement
             return DateTime.Now.Ticks.ToString();
         }
 
+        // Das wird in die jeweilige Ford Klasse ausgelagert mit Interface "GenerateRegistrationNumber"
         private static string GenerateFordRegistrationNumber(string endCustomerRegistrationReference, string registrationRegistrationId)
         {
             return string.IsNullOrWhiteSpace(endCustomerRegistrationReference) ? registrationRegistrationId : endCustomerRegistrationReference;
         }
 
+        // Das wird in die jeweilige Toyota Klasse ausgelagert mit Interface "GenerateRegistrationNumber"
         private static string GenerateToyotaRegistrationNumber(string endCustomerRegistrationReference, string registrationRegistrationId)
         {
             if (string.IsNullOrWhiteSpace(endCustomerRegistrationReference))
